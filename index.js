@@ -37,17 +37,17 @@ const main = async () => {
       }
 
       if (msg.content === '!biblejoin') {
-	if (msg.member.voice.channel) {
+        if (msg.member.voice.channel) {
           googletts(await randomVerse(books), 'de', 1)
             .then(async function (url) {
-		console.log(url);
-	        const connection = await msg.member.voice.channel.join();
-		const dispatcher = connection.play(url);
-		dispatcher.on('finish', () => {
-	          dispatcher.destroy();
-		});
-		connection.disconnect();
-	    });
+              console.log(url);
+              const connection = await msg.member.voice.channel.join();
+              const dispatcher = connection.play(url);
+              dispatcher.on('finish', () => {
+                dispatcher.destroy();
+              });
+              connection.disconnect();
+          });
         } else {
           msg.reply("Du bist nicht im Channel");
         }
