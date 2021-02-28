@@ -1,6 +1,6 @@
 # BibleBot
 
-[Add bot to your discord](https://discord.com/oauth2/authorize?client_id=743786590371053651&scope=bot&permissions=3072)
+[Add bot to your discord](https://discord.com/oauth2/authorize?client_id=815605962605723668&scope=bot&permissions=3072)
 
 ## Description
 This is a Discord bot that posts a random quote from the bible when you write `!bible` in the chat. Please note, that the quotes are from the German translation!
