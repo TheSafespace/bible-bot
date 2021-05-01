@@ -4,8 +4,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const _ = require('lodash');
 
-const Discord  = require('discord.js');
-const msSDK    = require('microsoft-cognitiveservices-speech-sdk');
+const Discord = require('discord.js');
+const msSDK = require('microsoft-cognitiveservices-speech-sdk');
 const bibleApi = require('./bibleApi');
 
 const getRandomVerse = async (books) => {
@@ -32,13 +32,11 @@ const getRandomVerse = async (books) => {
   };
 };
 
-const getSHA256 = (input) => {
-  return crypto.createHash('sha256').update(input).digest('hex');
-};
+const getSHA256 = (input) =>
+  crypto.createHash('sha256').update(input).digest('hex');
 
 const synthesizeSpeech = async (text, output, language, voiceName) => {
-  let speechConfig;
-  speechConfig = msSDK.SpeechConfig.fromSubscription(
+  const speechConfig = msSDK.SpeechConfig.fromSubscription(
     process.env.COGNITIVE_SERVICES_APIKEY,
     process.env.COGNITIVE_SERVICES_REGION,
   );
@@ -48,28 +46,30 @@ const synthesizeSpeech = async (text, output, language, voiceName) => {
   speechConfig.speechSynthesisOutputFormat =
     msSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
 
-  const audioConfig = msSDK.AudioConfig.fromAudioFileOutput(`./tts/${output}.wav`);
+  const audioConfig = msSDK.AudioConfig.fromAudioFileOutput(
+    `./tts/${output}.wav`,
+  );
 
   let synthesizer = new msSDK.SpeechSynthesizer(speechConfig, audioConfig);
 
   synthesizer.speakTextAsync(
     text,
     (result) =>
-    new promises((resolve, reject) => {
-      if (result.reason === msSDK.ResultReason.SynthesizingAudioCompleted) {
-        console.log('synthesis finished.');
-        resolve();
-      } else {
-        console.error(
-          `Speech synthesis canceled, ${result.errorDetails}\nDid you update the subscription info?`,
-        );
-        reject();
-      }
-      synthesizer.close();
-      synthesizer = undefined;
-    }),
+      new Promise((resolve, reject) => {
+        if (result.reason === msSDK.ResultReason.SynthesizingAudioCompleted) {
+          console.log('synthesis finished.');
+          resolve();
+        } else {
+          console.error(
+            `Speech synthesis canceled, ${result.errorDetails}\nDid you update the subscription info?`,
+          );
+          reject();
+        }
+        synthesizer.close();
+        synthesizer = undefined;
+      }),
     (error) => {
-      console.trace(`err - ${err}`);
+      console.trace(`err - ${error}`);
       synthesizer.close();
       synthesizer = undefined;
     },
@@ -106,8 +106,13 @@ const main = async () => {
         const bibleResult = await getRandomVerse(books);
         const text = `${bibleResult.bookName}, Kapitel ${bibleResult.chapterNumber}, Vers ${bibleResult.verseNumber} lautet: ${bibleResult.content}. Amen!`;
         const path = `./tts/${getSHA256(text)}.wav`;
-	if (!fs.existsSync(path))
-	  await synthesizeSpeech(text, getSHA256(text), 'de-DE', 'de-DE-ConradNeural');
+        if (!fs.existsSync(path))
+          await synthesizeSpeech(
+            text,
+            getSHA256(text),
+            'de-DE',
+            'de-DE-ConradNeural',
+          );
 
         msg.reply(
           `${bibleResult.content} ~ ${bibleResult.bookName}, Kapitel ${bibleResult.chapterNumber}, Vers ${bibleResult.verseNumber}`,
