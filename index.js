@@ -4,12 +4,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const _ = require('lodash');
 
-const Discord = require('discord.js');
-const GoogleTTS = require('node-google-tts-api');
-
+const Discord  = require('discord.js');
+const msSDK    = require('microsoft-cognitiveservices-speech-sdk');
 const bibleApi = require('./bibleApi');
-
-const tts = new GoogleTTS();
 
 const getRandomVerse = async (books) => {
   const chapterIds = books.data.map((book) => book.chapters).flat();
@@ -37,6 +34,47 @@ const getRandomVerse = async (books) => {
 
 const getSHA256 = (input) => {
   return crypto.createHash('sha256').update(input).digest('hex');
+};
+
+const synthesizeSpeech = async (text, output, language, voiceName) => {
+  let speechConfig;
+  speechConfig = msSDK.SpeechConfig.fromSubscription(
+    process.env.COGNITIVE_SERVICES_APIKEY,
+    process.env.COGNITIVE_SERVICES_REGION,
+  );
+
+  speechConfig.speechSynthesisLanguage = language;
+  speechConfig.speechSynthesisVoiceName = voiceName;
+  speechConfig.speechSynthesisOutputFormat =
+    msSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+
+  const audioConfig = msSDK.AudioConfig.fromAudioFileOutput(`./tts/${output}.wav`);
+
+  let synthesizer = new msSDK.SpeechSynthesizer(speechConfig, audioConfig);
+
+  synthesizer.speakTextAsync(
+    text,
+    (result) =>
+    new promises((resolve, reject) => {
+      if (result.reason === msSDK.ResultReason.SynthesizingAudioCompleted) {
+        console.log('synthesis finished.');
+        resolve();
+      } else {
+        console.error(
+          `Speech synthesis canceled, ${result.errorDetails}\nDid you update the subscription info?`,
+        );
+        reject();
+      }
+      synthesizer.close();
+      synthesizer = undefined;
+    }),
+    (error) => {
+      console.trace(`err - ${err}`);
+      synthesizer.close();
+      synthesizer = undefined;
+    },
+  );
+  console.log('Finished Synthesis');
 };
 
 const main = async () => {
@@ -67,19 +105,9 @@ const main = async () => {
       if (msg.member.voice.channel) {
         const bibleResult = await getRandomVerse(books);
         const text = `${bibleResult.bookName}, Kapitel ${bibleResult.chapterNumber}, Vers ${bibleResult.verseNumber} lautet: ${bibleResult.content}. Amen!`;
-        const ttsResult = await tts.get({
-          text,
-          lang: 'de',
-          limit_bypass: text.length >= 200,
-        });
-
-        // If the result length is less than 200 chars we get a string/buffer, otherwise an array
-        const data = _.isArray(ttsResult) ? tts.concat(ttsResult) : ttsResult;
-
-        const path = `./tts/${getSHA256(data)}.mp3`;
-        if (!fs.existsSync(path)) {
-          fs.writeFileSync(path, data);
-        }
+        const path = `./tts/${getSHA256(text)}.wav`;
+	if (!fs.existsSync(path))
+	  await synthesizeSpeech(text, getSHA256(text), 'de-DE', 'de-DE-ConradNeural');
 
         msg.reply(
           `${bibleResult.content} ~ ${bibleResult.bookName}, Kapitel ${bibleResult.chapterNumber}, Vers ${bibleResult.verseNumber}`,
